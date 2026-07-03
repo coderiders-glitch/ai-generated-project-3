@@ -1,0 +1,35 @@
+{
+  "name": "chat-backend",
+  "version": "1.0.0",
+  "description": "Lambda functions for chat processing and LLM integration",
+  "main": "src/handlers/chat.js",
+  "scripts": {
+    "build": "echo 'No build step required for Lambda functions'",
+    "lint": "eslint src/**/*.js",
+    "test": "jest",
+    "deploy": "serverless deploy",
+    "remove": "serverless remove",
+    "logs": "serverless logs -f chat -t"
+  },
+  "dependencies": {
+    "aws-sdk": "2.1490.0"
+  },
+  "devDependencies": {
+    "eslint": "8.53.0",
+    "jest": "29.7.0",
+    "serverless": "3.38.0",
+    "serverless-offline": "13.3.0"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "keywords": [
+    "lambda",
+    "serverless",
+    "chat",
+    "llm",
+    "aws"
+  ],
+  "author": "",
+  "license": "MIT"
+}

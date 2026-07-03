@@ -1,0 +1,109 @@
+service: chat-backend
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  environment:
+    INTERACTION_LOGS_TABLE: ${self:service}-${self:provider.stage}-interaction-logs
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    OPENAI_API_URL: ${env:OPENAI_API_URL, 'https://api.openai.com/v1/chat/completions'}
+    OPENAI_MODEL: ${env:OPENAI_MODEL, 'gpt-3.5-turbo'}
+    MAX_TOKENS: ${env:MAX_TOKENS, '150'}
+    TEMPERATURE: ${env:TEMPERATURE, '0.7'}
+    ENABLE_CLOUDWATCH_LOGS: ${env:ENABLE_CLOUDWATCH_LOGS, 'true'}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Scan
+            - dynamodb:Query
+          Resource:
+            - Fn::GetAtt: [InteractionLogsTable, Arn]
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: '*'
+
+functions:
+  health:
+    handler: src/handlers/chat.health
+    events:
+      - http:
+          path: /
+          method: get
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+            allowCredentials: false
+
+  chat:
+    handler: src/handlers/chat.chat
+    timeout: 30
+    events:
+      - http:
+          path: /chat
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+            allowCredentials: false
+      - http:
+          path: /chat
+          method: options
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+            allowCredentials: false
+
+resources:
+  Resources:
+    InteractionLogsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.INTERACTION_LOGS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserIdTimestampIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: timestamp
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 3001
+    host: 0.0.0.0
